@@ -107,14 +107,27 @@ System.register(['aurelia-path'], function (_export, _context) {
     return nextStates;
   }
 
+  function matchesHref(result, path) {
+    if (result.handler && result.handler.href !== undefined) {
+      var href = result.handler.href;
+      if (result.params.childRoute !== undefined) {
+        href = href + '/' + result.params.childRoute;
+      }
+      if (href === path) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   function findHandler(state, path, queryParams) {
     var handlers = state.handlers;
     var regex = state.regex;
     var captures = path.match(regex);
-    var currentCapture = 1;
     var result = new RecognizeResults(queryParams);
 
     for (var i = 0, l = handlers.length; i < l; i++) {
+      var currentCapture = 1;
       var _handler = handlers[i];
       var _names = _handler.names;
       var _params = {};
@@ -126,7 +139,15 @@ System.register(['aurelia-path'], function (_export, _context) {
       result.push({ handler: _handler.handler, params: _params, isDynamic: !!_names.length });
     }
 
-    return result;
+    return result.sort(function (a, b) {
+      if (matchesHref(a, path)) {
+        return -1;
+      }
+      if (matchesHref(b, path)) {
+        return 1;
+      }
+      return 0;
+    });
   }
 
   function addSegment(currentState, segment) {
@@ -381,19 +402,22 @@ System.register(['aurelia-path'], function (_export, _context) {
             }
           }
 
-          var handlers = [{ handler: route.handler, names: names }];
+          var handler = { handler: route.handler, names: names };
 
           if (routeName) {
             var routeNames = Array.isArray(routeName) ? routeName : [routeName];
             for (var _i2 = 0; _i2 < routeNames.length; _i2++) {
               this.names[routeNames[_i2]] = {
                 segments: segments,
-                handlers: handlers
+                handlers: [handler]
               };
             }
           }
 
-          currentState.handlers = handlers;
+          if (!currentState.handlers) {
+            currentState.handlers = [];
+          }
+          currentState.handlers.push(handler);
           currentState.regex = new RegExp(regex + '$', route.caseSensitive ? '' : 'i');
           currentState.types = types;
 
@@ -523,6 +547,7 @@ System.register(['aurelia-path'], function (_export, _context) {
         this.splice = Array.prototype.splice;
         this.slice = Array.prototype.slice;
         this.push = Array.prototype.push;
+        this.sort = Array.prototype.sort;
         this.length = 0;
         this.queryParams = queryParams || {};
       };
