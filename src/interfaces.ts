@@ -1,5 +1,7 @@
 interface RouteHandler {
-  name: string;
+  name?: string | string[];
+  generationUsesHref?: boolean;
+  href?: string;
 }
 
 interface ConfigurableRoute {
@@ -23,4 +25,10 @@ interface CharSpec {
   invalidChars?: string;
   validChars?: string;
   repeat?: boolean;
+}
+
+interface StateTypes {
+  statics: number,
+  dynamics: number,
+  stars: number
 }

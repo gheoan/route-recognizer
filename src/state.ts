@@ -16,15 +16,23 @@
 // implementation would use a hash of keys pointing at one or more next states.
 
 export class State {
-  constructor(charSpec: CharSpec) {
+  charSpec?: CharSpec;
+  nextStates: State[];
+
+  regex: RegExp;
+  handlers?: HandlerEntry[];
+  types: StateTypes;
+  epsilon: State[];
+
+  constructor(charSpec?: CharSpec) {
     this.charSpec = charSpec;
     this.nextStates = [];
   }
 
-  get(charSpec: CharSpec): State {
+  get(charSpec: CharSpec): State | undefined {
     for (let child of this.nextStates) {
-      let isEqual = child.charSpec.validChars === charSpec.validChars
-        && child.charSpec.invalidChars === charSpec.invalidChars;
+      let isEqual = child.charSpec!.validChars === charSpec.validChars
+        && child.charSpec!.invalidChars === charSpec.invalidChars;
 
       if (isEqual) {
         return child;
@@ -67,7 +75,7 @@ export class State {
 
     for (let i = 0, l = nextStates.length; i < l; i++) {
       let child = nextStates[i];
-      let charSpec = child.charSpec;
+      let charSpec = child.charSpec!;
 
       if (charSpec.validChars !== undefined) {
         if (charSpec.validChars.indexOf(ch) !== -1) {

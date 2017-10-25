@@ -14,6 +14,14 @@ import {
 * @constructor
 */
 export class RouteRecognizer {
+  rootState: State;
+  names: {
+    [key: string]: {
+      segments: Array<StaticSegment | DynamicSegment | StarSegment | EpsilonSegment>,
+      handlers: HandlerEntry[];
+    }
+  };
+
   constructor() {
     this.rootState = new State();
     this.names = {};
@@ -24,7 +32,7 @@ export class RouteRecognizer {
   *
   * @param route The route to add.
   */
-  add(route: ConfigurableRoute|ConfigurableRoute[]): State {
+  add(route: ConfigurableRoute|ConfigurableRoute[]): State | undefined {
     if (Array.isArray(route)) {
       route.forEach(r => this.add(r));
       return undefined;
@@ -33,7 +41,7 @@ export class RouteRecognizer {
     let currentState = this.rootState;
     let regex = '^';
     let types = { statics: 0, dynamics: 0, stars: 0 };
-    let names = [];
+    let names: string[] = [];
     let routeName = route.handler.name;
     let isEmpty = true;
     let isAllOptional = true;
@@ -46,11 +54,11 @@ export class RouteRecognizer {
       }
 
       isEmpty = false;
-      isAllOptional = isAllOptional && segment.optional;
+      isAllOptional = isAllOptional && (segment as DynamicSegment).optional;
 
       // Add a representation of the segment to the NFA and regex
       currentState = addSegment(currentState, segment);
-      regex += segment.optional ? '/?' : '/';
+      regex += (segment as DynamicSegment).optional ? '/?' : '/';
       regex += segment.regex();
     }
 
@@ -143,8 +151,8 @@ export class RouteRecognizer {
 
       let segmentValue = segment.generate(routeParams, consumed);
       if (segmentValue === null || segmentValue === undefined) {
-        if (!segment.optional) {
-          throw new Error(`A value is required for route parameter '${segment.name}' in route '${name}'.`);
+        if (!(segment as DynamicSegment).optional) {
+          throw new Error(`A value is required for route parameter '${(segment as DynamicSegment).name}' in route '${name}'.`);
         }
       } else {
         output += '/';
@@ -229,7 +237,14 @@ export class RouteRecognizer {
   }
 }
 
-class RecognizeResults {
+export class RecognizeResults {
+  splice;
+  slice;
+  push;
+  sort;
+  length;
+  queryParams: Object;
+
   constructor(queryParams: Object) {
     this.splice = Array.prototype.splice;
     this.slice = Array.prototype.slice;
@@ -239,7 +254,7 @@ class RecognizeResults {
   }
 }
 
-function parse(route, names, types, caseSensitive) {
+function parse(route: string, names: string[], types: StateTypes, caseSensitive: boolean) {
   // normalize route as not starting with a '/'. Recognition will
   // also normalize.
   let normalizedRoute = route;
@@ -293,7 +308,7 @@ function parse(route, names, types, caseSensitive) {
 //  * prefers using stars for less of the match to more, then
 //  * prefers fewer dynamic segments to more, then
 //  * prefers more static segments to more
-function sortSolutions(states) {
+function sortSolutions(states: State[]) {
   return states.sort((a, b) => {
     if (a.types.stars !== b.types.stars) {
       return a.types.stars - b.types.stars;
@@ -320,8 +335,8 @@ function sortSolutions(states) {
   });
 }
 
-function recognizeChar(states, ch) {
-  let nextStates = [];
+function recognizeChar(states: State[], ch: string) {
+  let nextStates: State[] = [];
 
   for (let i = 0, l = states.length; i < l; i++) {
     let state = states[i];
@@ -330,7 +345,7 @@ function recognizeChar(states, ch) {
 
   let skippableStates = nextStates.filter(s => s.epsilon);
   while (skippableStates.length > 0) {
-    let newStates = [];
+    let newStates: State[] = [];
     skippableStates.forEach(s => {
       nextStates.push(...s.epsilon);
       newStates.push(...s.epsilon);
@@ -341,8 +356,8 @@ function recognizeChar(states, ch) {
   return nextStates;
 }
 
-function findHandler(state, path, queryParams) {
-  let handlers = state.handlers;
+function findHandler(state: State, path: string, queryParams: Object): RecognizeResults {
+  let handlers = state.handlers!;
   let regex = state.regex;
   let captures = path.match(regex);
   let currentCapture = 1;
@@ -363,13 +378,13 @@ function findHandler(state, path, queryParams) {
   return result;
 }
 
-function addSegment(currentState, segment) {
+function addSegment(currentState: State, segment: StaticSegment | DynamicSegment | StarSegment) {
   let state = currentState.put({ validChars: '/' });
   segment.eachChar(ch => {
     state = state.put(ch);
   });
 
-  if (segment.optional) {
+  if ((segment as DynamicSegment).optional) {
     currentState.epsilon = currentState.epsilon || [];
     currentState.epsilon.push(state);
   }

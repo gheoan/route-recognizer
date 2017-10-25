@@ -23,6 +23,9 @@ const escapeRegex = new RegExp('(\\' + specials.join('|\\') + ')', 'g');
 // * `repeat`: true if the character specification can repeat
 
 export class StaticSegment {
+  string: string;
+  caseSensitive: boolean;
+
   constructor(string: string, caseSensitive: boolean) {
     this.string = string;
     this.caseSensitive = caseSensitive;
@@ -46,6 +49,9 @@ export class StaticSegment {
 }
 
 export class DynamicSegment {
+  name: string;
+  optional: boolean;
+
   constructor(name: string, optional: boolean) {
     this.name = name;
     this.optional = optional;
@@ -66,6 +72,8 @@ export class DynamicSegment {
 }
 
 export class StarSegment {
+  name: string;
+
   constructor(name: string) {
     this.name = name;
   }
