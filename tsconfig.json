@@ -10,6 +10,8 @@
     "listFiles": true,
     "declaration": true,
     "removeComments": true,
+    "strict": true,
+    "suppressImplicitAnyIndexErrors": true,
     "lib": ["es2015", "dom"]
   },
   "exclude": [
