@@ -202,4 +202,23 @@ describe('route recognizer', () => {
     let result = recognizer.recognize(routeTest.path);
     expect(result).toBeUndefined();
   });
+
+  it(`matches paths with query`, () => {
+    let recognizer = new RouteRecognizer();
+    recognizer.add([
+      {
+        path: '?a',
+        handler: { name: 'a' },
+        caseSensitive: true
+      },
+      {
+        path: '?b',
+        handler: { name: 'b' },
+        caseSensitive: true
+      }
+    ]);
+
+    let result = recognizer.recognize('?b');
+    expect(result.name).toBe('b');
+  });
 });
